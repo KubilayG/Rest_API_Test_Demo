@@ -1,63 +1,121 @@
 using Newtonsoft.Json.Linq;
+using Rest_API_Test_Demo.Model;
 using RestSharp;
-using System.Net.Http.Json;
-using System.Text.Json;
-
 
 namespace Rest_API_Test_Demo
 {
-    public class Tests
-    {
-        private RestClient _client;
-        private string _baseUrl;
+	public class Tests
+	{
+		private RestClient _client;
+		private string _baseUrl;
 
-        [SetUp]
-        public void Setup()
-        {
-            _baseUrl = "https://jsonplaceholder.typicode.com/";
-            _client = new RestClient(_baseUrl);
-        }
+		[SetUp]
+		public void Setup()
+		{
+			_baseUrl = "https://jsonplaceholder.typicode.com/";
+			_client = new RestClient(_baseUrl);
+		}
 
-        [Test]
-        public void TestGet()
-        {
-            var endPoint = "posts/{userId}";
-            
-            var request = new RestRequest(endPoint, Method.Get);
-            
-            request.AddUrlSegment("userId", 1);
+		[Test]
+		public void TestGet()
+		{
+			var endPoint = "posts/1";
 
-            var response = _client.Execute(request);
+			var request = new RestRequest(endPoint, Method.Get);
 
-            JObject obs = JObject.Parse(response.Content);
+			var response = _client.Execute<Posts.Post>(request);
 
-            Assert.That(obs["title"].ToString, Is.EqualTo("sunt aut facere repellat provident occaecati excepturi optio reprehenderit"), "Es gibt einen Fehler im Get Method");
-        }
+			Assert.That(response.IsSuccessful, Is.True, $"Es gibt einen Fehler im Get Method: {response.StatusCode}-{response.ErrorMessage}");
 
-        [Test]
-        public void TestPost() 
-        {
-            var endPoint = "posts";
+			if (response.IsSuccessful && response.Data != null)
+			{
+				var post = response.Data;
 
-            var request = new RestRequest(endPoint, Method.Post);
+				Assert.That(post.title,
+				Is.EqualTo("sunt aut facere repellat provident occaecati excepturi optio reprehenderit"), $"Falscher Titel zurückgegeben: {response.Data?.title}");
+			}
+		}
 
-            request.RequestFormat = DataFormat.Json;
+		[Test]
+		public void TestPost()
+		{
+			var endPoint = "todos";
 
-            request.AddBody(new { title = "Ich bin ein Praktikant" });
+			var request = new RestRequest(endPoint, Method.Post);
 
-            request.AddUrlSegment("userId", 1);
+			request.AddJsonBody(new Todos { userId = 11, id = 201, title = "Ich bin ein Praktikant", completed = true });
 
-            var response = _client.Execute(request);
+			var response = _client.Execute<Todos>(request);
 
-            Assert.That(response.IsSuccessful, Is.True, "Es gibt einen Fehler im Post Method");
+			Assert.That(response.Data?.title, Is.EqualTo("Ich bin ein Praktikant"), $"Es gibt einen Fehler im Post Method: {response.StatusCode}-{response.ErrorMessage}");
 
-        }
+		}
 
-        [TearDown]
-        public void TearDown() 
-        {
-            _client.Dispose();
-        }
+		public async Task TestPostAsync()
+		{
+			var endPoint = "todos";
 
-    }
+			var request = new RestRequest(endPoint, Method.Post);
+
+			request.AddJsonBody(new Todos { userId = 11, id = 201, title = "Ich bin ein Praktikant", completed = true });
+
+			var response = await _client.ExecuteAsync<Todos>(request);
+
+			Assert.That(response.IsSuccessful, Is.True, $"Es gibt einen Fehler im Post Async Method: {response.StatusCode} - {response.ErrorMessage}");
+
+			if (response.IsSuccessful)
+			{
+				Assert.That(response.Data?.title, Is.EqualTo("Ich bin ein Praktikant"), $"Falscher Titel zurückgegeben: {response.Data?.title}");
+			}
+		}
+
+
+		[Test]
+		public void TestPut()
+		{
+			var endPoint = "todos/11";
+
+			var request = new RestRequest(endPoint, Method.Put);
+
+			request.AddJsonBody(new Todos { userId = 11, id = 201, title = "Ich bin ein Lehrer", completed = false });
+
+			var response = _client.Execute(request);
+
+			Assert.That(response.IsSuccessful, Is.True, $"Es gibt einen Fehler im Put Method: {response.StatusCode}-{response.ErrorMessage}");
+
+		}
+		[Test]
+		public void TestPatch()
+		{
+			var endPoint = "todos/11";
+
+			var request = new RestRequest(endPoint, Method.Patch);
+
+			request.AddJsonBody(new Todos { title = "Ich bin ein Architekt" });
+
+			var response = _client.Execute(request);
+
+			Assert.That(response.IsSuccessful, Is.True, $"Es gibt einen Fehler im Patch Method: {response.StatusCode}-{response.ErrorMessage}");
+
+		}
+		[Test]
+		public void TestDelete()
+		{
+			var endPoint = "todos/11";
+
+			var request = new RestRequest(endPoint, Method.Delete);
+
+			var response = _client.Execute(request);
+
+			Assert.That(response.IsSuccessful, Is.True, $"Es gibt einen Fehler im Delete Method: {response.StatusCode}-{response.ErrorMessage}");
+
+		}
+
+		[TearDown]
+		public void TearDown()
+		{
+			_client.Dispose();
+		}
+
+	}
 }
